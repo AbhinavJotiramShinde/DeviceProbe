@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DeviceProbe</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>DeviceProbe - Network & Port Scanner</h1>
+<br>
+<div id="network-scan">
+  <h2>Scan Network</h2>
+  <input id="gateway" type="text" placeholder="Gateway IP (e.g. 192.168.1.1)" value="">
+  <input id="subnet" type="text" placeholder="Subnet Mask (e.g. 24)" value="">
+  <button onclick="scanNetwork()">Scan Network</button>
+</div>
+
+<div id="devices"></div>
+
+<script>
+function isValidIP(ip) {
+    const regex = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+    return regex.test(ip);
+}
+
+function isValidSubnet(subnet) {
+    const num = Number(subnet);
+    return Number.isInteger(num) && num >= 0 && num <= 32;
+}
+
+async function scanNetwork() {
+    const gateway = document.getElementById('gateway').value.trim();
+    const subnet = document.getElementById('subnet').value.trim();
+
+    if (!gateway || !subnet) {
+        alert("Please enter both Gateway and Subnet!");
+        return;
+    }
+    if (!isValidIP(gateway)) {
+        alert("Invalid Gateway IP!");
+        return;
+    }
+    if (!isValidSubnet(subnet)) {
+        alert("Invalid Subnet! Must be 0-32.");
+        return;
+    }
+
+    document.getElementById('devices').innerHTML = "Scanning...";
+    const res = await fetch('/scan_network', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({gateway, subnet})
+    });
+
+    const data = await res.json();
+    displayDevices(data);
+}
+
+function displayDevices(devices) {
+    let html = "<h2>Devices Found</h2>";
+    html += "<table><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Ports</th><th>Action</th></tr>";
+    devices.forEach((d, index) => {
+        html += `<tr id="device-${index}">
+          <td>${d.ip}</td>
+          <td>${d.mac}</td>
+          <td>${d.hostname}</td>
+          <td id="ports-${index}">-</td>
+          <td><button onclick="scanDevice('${d.ip}', ${index})">Scan Ports</button></td>
+        </tr>`;
+    });
+    html += "</table>";
+    document.getElementById('devices').innerHTML = html;
+}
+
+async function scanDevice(ip, index) {
+    const start_port = prompt("Enter start port");
+    const end_port   = prompt("Enter end port");
+
+    if (!start_port || !end_port) {
+        alert("Please enter both start and end ports.");
+        return;
+    }
+
+    const res = await fetch('/scan_device', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ip, start_port, end_port})
+    });
+    const result = await res.json();
+
+    const portsCell = document.getElementById(`ports-${index}`);
+    if(result.open_ports.length){
+        portsCell.innerHTML = result.open_ports.join(', ');
+    } else {
+        portsCell.innerHTML = "No open ports";
+    }
+}
+</script>
+</body>
+</html>
