@@ -56,5 +56,4 @@ b.Resolves hostname (if available)
 c.Click “Scan Ports” on any host to run a TCP port scan and display the open ports.
 
 
-Author
-Your Name – Abhinav Jotiram Shinde
+Author: Abhinav Jotiram Shinde
